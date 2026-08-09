@@ -20,11 +20,20 @@ Pushing to `main` builds and publishes to GitHub Pages via
 the physics suite first, so a deploy can't go out on a broken integrator.
 
 It publishes by force-pushing the built `dist/` to a `gh-pages` branch, which
-needs nothing beyond `contents: write` and sets Pages up on its own the first
-time that branch appears. The newer `actions/deploy-pages` route is tidier on
-paper but additionally requires the Pages site to already exist, and
-`GITHUB_TOKEN` has no permission to create one — so it can never succeed on a
-fresh repo without someone configuring it by hand first.
+needs nothing beyond `contents: write`. The newer `actions/deploy-pages` route is
+tidier on paper but requires the Pages site to already exist, and `GITHUB_TOKEN`
+has no permission to create one — it fails with `Resource not accessible by
+integration` on a fresh repo no matter how the workflow is written.
+
+The Pages site itself has to be created once, by someone with admin rights on the
+repo. Pushing a `gh-pages` branch does **not** create it automatically. Already
+done for this repo; for a fork, either set **Settings → Pages → Source** to
+**Deploy from a branch** / `gh-pages` / `/ (root)`, or run once:
+
+```bash
+echo '{"source":{"branch":"gh-pages","path":"/"}}' \
+  | gh api --method POST repos/{owner}/{repo}/pages --input -
+```
 
 Vite's `base` is `'./'` rather than the usual hardcoded `'/<repo>/'`. A project
 page is served from `https://<user>.github.io/<repo>/`, and with the default base
@@ -33,9 +42,7 @@ root, 404s, and renders blank with no obvious cause. Relative URLs work at the
 domain root, under any repo name, and straight off the filesystem — and there's
 no client-side routing here to complicate them.
 
-No repo configuration is needed. If Pages was previously pointed at "GitHub
-Actions" as its source, switch **Settings → Pages → Source** back to **Deploy
-from a branch**, `gh-pages` / `/ (root)`.
+Live at **https://marcoro11.github.io/orbit-simulator/**.
 
 ## About the three-body problem
 
