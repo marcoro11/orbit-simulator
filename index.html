@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="An interactive 3D N-body gravity sandbox: build star systems from orbital elements, drag planets into orbit, and watch what actually happens."
+    />
+    <title>Orbit Simulator</title>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="labels"></div>
+
+    <div id="hud">
+      <div><span class="k">time</span><span class="v" id="hud-time">—</span></div>
+      <div><span class="k">bodies</span><span class="v" id="hud-count">—</span></div>
+      <div><span class="k">grid</span><span class="v" id="hud-grid">—</span></div>
+      <div><span class="k">energy drift</span><span class="v" id="hud-energy">—</span></div>
+      <div><span class="k">fps</span><span class="v" id="hud-fps">—</span></div>
+    </div>
+
+    <div id="toast"></div>
+
+    <aside id="panel">
+      <header>
+        <h1>Orbit Simulator</h1>
+        <p class="sub">3D N-body gravity · leapfrog integrator · AU / M<sub>☉</sub> / day</p>
+      </header>
+
+      <section>
+        <h2>System</h2>
+        <select id="preset"></select>
+        <p class="desc" id="preset-desc"></p>
+        <div class="row">
+          <button id="reset" class="wide">Reload preset</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Camera</h2>
+        <div class="seg small">
+          <button id="view-top">Top</button>
+          <button id="view-tilt">Tilted</button>
+          <button id="view-edge">Edge-on</button>
+        </div>
+        <p class="hint">
+          <b>Ctrl</b> (or <b>⌘</b>) + drag orbits the camera from anywhere — no need to switch tools.
+          <b>Shift</b> + drag slides the view, and the wheel zooms toward the cursor.
+        </p>
+      </section>
+
+      <section>
+        <h2>Time</h2>
+        <div class="row">
+          <button id="playpause" class="primary">Pause</button>
+          <button id="stepone">Step</button>
+        </div>
+        <label class="field">
+          <span>Step size <em id="dt-val"></em></span>
+          <input type="range" id="dt" min="-3" max="1.2" step="0.01" />
+        </label>
+        <label class="field">
+          <span>Steps / frame <em id="spf-val"></em></span>
+          <input type="range" id="spf" min="1" max="60" step="1" />
+        </label>
+        <p class="hint" id="rate-hint"></p>
+      </section>
+
+      <section>
+        <h2>Body type</h2>
+        <select id="body-type"></select>
+        <div class="grid2">
+          <label class="num">
+            <span>Mass</span>
+            <input type="number" id="body-mass" step="any" min="0" />
+          </label>
+          <label class="num">
+            <span>Unit</span>
+            <select id="body-massunit">
+              <option value="earth">M⊕</option>
+              <option value="jupiter">M♃</option>
+              <option value="solar">M☉</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint" id="type-note"></p>
+      </section>
+
+      <section>
+        <h2>Build precisely</h2>
+        <div class="grid2">
+          <label class="num span2">
+            <span>Orbits around</span>
+            <select id="build-parent"></select>
+          </label>
+          <label class="num">
+            <span>Distance (AU)</span>
+            <input type="number" id="build-dist" value="1" min="0" step="0.1" />
+          </label>
+          <label class="num">
+            <span>Eccentricity</span>
+            <input type="number" id="build-ecc" value="0" min="0" max="0.95" step="0.05" />
+          </label>
+          <label class="num">
+            <span>Inclination (°)</span>
+            <input type="number" id="build-incl" value="0" step="5" />
+          </label>
+          <label class="num">
+            <span>Start angle (°)</span>
+            <input type="number" id="build-angle" value="0" step="15" />
+          </label>
+        </div>
+        <p class="readout" id="build-readout"></p>
+        <div class="row">
+          <button id="build-add" class="primary wide">Add to system</button>
+        </div>
+        <p class="hint">
+          Distance is the semi-major axis from the parent. The start angle advances
+          automatically after each add, so successive bodies don't stack on top of each other.
+        </p>
+      </section>
+
+      <section>
+        <h2>Place by dragging</h2>
+        <div class="seg" id="tool">
+          <button data-tool="add" class="on">Add</button>
+          <button data-tool="camera">Camera</button>
+        </div>
+        <p class="hint">
+          In <b>Add</b> mode, drag on empty space: where you press is the position, the drag
+          direction and length set the launch velocity. The green line previews the resulting path.
+        </p>
+        <label class="field">
+          <span>Place above plane <em id="height-val"></em></span>
+          <input type="range" id="height" min="-1" max="1" step="0.005" value="0" />
+        </label>
+      </section>
+
+      <section>
+        <h2>Selection</h2>
+        <div id="sel-empty" class="hint">Click a body to select it.</div>
+        <div id="sel-body" hidden>
+          <div class="selname"><span id="sel-dot" class="dot"></span><span id="sel-title"></span></div>
+          <dl class="stats">
+            <dt>mass</dt><dd id="sel-mass">—</dd>
+            <dt>speed</dt><dd id="sel-speed">—</dd>
+            <dt>dist. to barycenter</dt><dd id="sel-dist">—</dd>
+            <dt>height above plane</dt><dd id="sel-z">—</dd>
+          </dl>
+          <div class="row">
+            <button id="sel-follow">Follow</button>
+            <button id="sel-delete" class="danger">Delete</button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Display</h2>
+        <label class="check"><input type="checkbox" id="opt-trails" checked /> Orbit trails</label>
+        <label class="field">
+          <span>Trail length <em id="trail-val"></em></span>
+          <input type="range" id="traillen" min="50" max="8000" step="50" value="900" />
+        </label>
+        <label class="check"><input type="checkbox" id="opt-grid" checked /> Ecliptic grid</label>
+        <label class="check"><input type="checkbox" id="opt-drops" checked /> Drop lines to plane</label>
+        <label class="check"><input type="checkbox" id="opt-labels" checked /> Labels</label>
+        <label class="field">
+          <span>Body size <em id="bodysize-val"></em></span>
+          <input type="range" id="bodysize" min="0.3" max="3" step="0.05" value="1" />
+        </label>
+        <div class="row">
+          <button id="clear-trails" class="wide">Clear trails</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Physics</h2>
+        <label class="check"><input type="checkbox" id="opt-merge" checked /> Merge on collision</label>
+        <label class="field">
+          <span>Softening <em id="soft-val"></em></span>
+          <input type="range" id="softening" min="-7" max="-1.3" step="0.05" />
+        </label>
+        <p class="hint">
+          Softening caps the force during close encounters so bodies don't get flung to infinity by a
+          near-singular <code>1/r²</code>. Lower is more physically honest, but needs a smaller step.
+        </p>
+      </section>
+
+      <section>
+        <h2>Controls</h2>
+        <ul class="keys">
+          <li><kbd>Ctrl-drag</kbd> orbit camera</li>
+          <li><kbd>Shift-drag</kbd> slide view</li>
+          <li><kbd>Wheel</kbd> zoom at cursor</li>
+          <li><kbd>Click</kbd> select body</li>
+          <li><kbd>Space</kbd> play / pause</li>
+          <li><kbd>T</kbd> / <kbd>E</kbd> top / edge-on view</li>
+          <li><kbd>F</kbd> follow selection</li>
+          <li><kbd>Delete</kbd> remove selection</li>
+          <li><kbd>R</kbd> reload preset</li>
+        </ul>
+      </section>
+    </aside>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

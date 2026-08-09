@@ -1,0 +1,23 @@
+{
+  "name": "orbit-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild test/physics.test.ts --bundle --platform=node --format=esm --outfile=.test-build/physics.mjs --log-level=warning && node .test-build/physics.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/three": "^0.185.3",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  }
+}
