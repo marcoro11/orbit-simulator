@@ -34,7 +34,14 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      # `enablement: true` creates the Pages site on first run instead of
+      # failing with "Get Pages site failed / Not Found". Without it the repo
+      # has to be configured by hand before the workflow can ever succeed —
+      # which also bites anyone who forks this.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
