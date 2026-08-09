@@ -19,6 +19,13 @@ Pushing to `main` builds and publishes to GitHub Pages via
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). The workflow runs
 the physics suite first, so a deploy can't go out on a broken integrator.
 
+It publishes by force-pushing the built `dist/` to a `gh-pages` branch, which
+needs nothing beyond `contents: write` and sets Pages up on its own the first
+time that branch appears. The newer `actions/deploy-pages` route is tidier on
+paper but additionally requires the Pages site to already exist, and
+`GITHUB_TOKEN` has no permission to create one — so it can never succeed on a
+fresh repo without someone configuring it by hand first.
+
 Vite's `base` is `'./'` rather than the usual hardcoded `'/<repo>/'`. A project
 page is served from `https://<user>.github.io/<repo>/`, and with the default base
 of `'/'` the built page asks for `/assets/index.js`, which resolves to the domain
@@ -26,8 +33,9 @@ root, 404s, and renders blank with no obvious cause. Relative URLs work at the
 domain root, under any repo name, and straight off the filesystem — and there's
 no client-side routing here to complicate them.
 
-In the repo's **Settings → Pages**, the source must be set to **GitHub Actions**
-(not "Deploy from a branch").
+No repo configuration is needed. If Pages was previously pointed at "GitHub
+Actions" as its source, switch **Settings → Pages → Source** back to **Deploy
+from a branch**, `gh-pages` / `/ (root)`.
 
 ## About the three-body problem
 
